@@ -118,10 +118,10 @@ for i in range(5):
 day_drop = df_pricechanges.sort_values(by=['pct_change1D'])[["Symbol", "Security", "GICS_Sector", 
                                                         "GICS_Sub_Industry", "latestPrice", 
                                                              "pct_change1D", "pct_change1W","pct_changeFrom1YHigh"]]
-#day_drop["pct_change1W"].fillna(value=0, inplace=True)
 
-make_charts(day_drop, "pct_change1D", "Day")
-day_drop.head(20).style.format({'latestPrice': "{:.2f}", 'pct_change1D': "{:.2%}", 
+if len(sys.argv) == 1 or "ipykernel_launcher" in sys.argv[0]:
+    make_charts(day_drop, "pct_change1D", "Day")
+    day_drop.head(20).style.format({'latestPrice': "{:.2f}", 'pct_change1D': "{:.2%}", 
                                 'pct_change1W': "{:.2%}", 'pct_changeFrom1YHigh': "{:.2%}"}, na_rep= "N/A")
 
 
@@ -133,8 +133,10 @@ day_drop.head(20).style.format({'latestPrice': "{:.2f}", 'pct_change1D': "{:.2%}
 week_drop = df_pricechanges.sort_values(by=['pct_change1W'])[["Symbol", "Security", "GICS_Sector", 
                                                         "GICS_Sub_Industry", "latestPrice","lastweekPrice",
                                                               "pct_change1W","pct_changeFrom1YHigh"]]
-make_charts(week_drop, "pct_change1W", "Week")
-week_drop.head(20).style.format({'latestPrice': "{:.2f}", 'lastweekPrice': "{:.2f}", 'pct_change1W': "{:.2%}", 
+
+if len(sys.argv) == 1 or "ipykernel_launcher" in sys.argv[0]:
+    make_charts(week_drop, "pct_change1W", "Week")
+    week_drop.head(20).style.format({'latestPrice': "{:.2f}", 'lastweekPrice': "{:.2f}", 'pct_change1W': "{:.2%}", 
                                  'pct_changeFrom1YHigh': "{:.2%}"}, na_rep= "N/A")
 
 
@@ -145,8 +147,10 @@ week_drop.head(20).style.format({'latestPrice': "{:.2f}", 'lastweekPrice': "{:.2
 
 yearhigh_drop = df_pricechanges.sort_values(by=['pct_changeFrom1YHigh'])[["Symbol", "Security", "GICS_Sector", 
                                             "GICS_Sub_Industry", "latestPrice", "week52High","pct_changeFrom1YHigh"]]
-make_charts(yearhigh_drop, "pct_changeFrom1YHigh", "1-Yr High")
-yearhigh_drop.head(40).style.format({'latestPrice': "{:.2f}", 'week52High': "{:.2f}", 
+
+if len(sys.argv) == 1 or "ipykernel_launcher" in sys.argv[0]:
+    make_charts(yearhigh_drop, "pct_changeFrom1YHigh", "1-Yr High")
+    yearhigh_drop.head(40).style.format({'latestPrice': "{:.2f}", 'week52High': "{:.2f}", 
                                      'pct_changeFrom1YHigh': "{:.2%}"}, na_rep= "N/A")
 
 
@@ -165,7 +169,7 @@ def format_pricedrops(data, pricedropfield, thresholds, colors):
     for i, threshold in enumerate(thresholds):
         if data[pricedropfield] < threshold:
             background_color = colors[i]
-    background_color = "background-color: " + background_color
+    background_color = "background-color: " + background_color if background_color != "none" else None
     cols = ["" if index != "Security" else background_color for index, value in data.items()]
     return cols
     
@@ -173,34 +177,117 @@ def getDataForEmail():
     day_drop_styled = day_drop[day_drop["GICS_Sector"]!= "Energy"][day_drop["pct_change1D"] < -0.05]
     if (len(day_drop_styled.index) < 5):
         day_drop_styled = day_drop[day_drop["GICS_Sector"]!= "Energy"].head(5)
-    day_drop_styled = day_drop_styled.style.format({'latestPrice': "{:.2f}", 'pct_change1D': "{:.2%}",
-                                                    'pct_change1W': "{:.2%}", 'pct_changeFrom1YHigh': "{:.2%}"}, na_rep= "N/A") \
+    day_drop_styled = day_drop_styled.rename({"pct_change1D": "1DayChange", "pct_change1W": "1WeekChange", 
+                                              "pct_changeFrom1YHigh": "1YrHighChange"}, axis=1)
+    day_drop_styled = day_drop_styled.style.format({'latestPrice': "{:.2f}", '1DayChange': "{:.2%}",
+                                                    '1WeekChange': "{:.2%}", '1YrHighChange': "{:.2%}"}, na_rep= "N/A") \
         .apply(format_sectors, axis=1) \
-        .apply(format_pricedrops, pricedropfield="pct_change1D", 
+        .apply(format_pricedrops, pricedropfield="1DayChange", 
                thresholds=[-0.05, -0.1], colors=["lightsteelblue", "steelblue"], axis=1) \
-        .hide_columns(['Symbol', 'GICS_Sector'])
+        .hide_columns(['GICS_Sector']) \
+        .hide_index() \
+        .set_table_attributes('cellspacing="0"') \
+        .set_table_styles(
+           [{
+               'selector': 'table',
+               'props': [
+                   ('border-collapse', 'collapse')]
+           }, {
+               'selector': 'th',
+               'props': [
+                   ('border-collapse', 'collapse'),
+                   ('background-color', 'gray'),
+                   ('color', 'white'),
+                   ('border-color', 'black'),
+                   ('border-style ', 'solid'),
+                   ('border-width','1px')]
+           },
+            {
+               'selector': 'td',
+               'props': [
+                   ('border-collapse', 'collapse'),
+                   ('border-color', 'black'),
+                   ('border-style ', 'solid'),
+                   ('border-width','1px')]
+           }
+           ])
     
     week_drop_styled = week_drop[week_drop["GICS_Sector"]!= "Energy"][week_drop["pct_change1W"] < -0.05]
     if (len(week_drop_styled.index) < 5):
         week_drop_styled = week_drop[week_drop["GICS_Sector"]!= "Energy"].head(5)
+    week_drop_styled = week_drop_styled.rename({"pct_change1W": "1WeekChange", 
+                                              "pct_changeFrom1YHigh": "1YrHighChange"}, axis=1)
     week_drop_styled = week_drop_styled.style.format({'latestPrice': "{:.2f}", 'lastweekPrice': "{:.2f}", 
-                                                      'pct_change1W': "{:.2%}", 'pct_changeFrom1YHigh': "{:.2%}"}, na_rep= "N/A") \
+                                                      '1WeekChange': "{:.2%}", '1YrHighChange': "{:.2%}"}, na_rep= "N/A") \
         .apply(format_sectors, axis=1) \
-        .apply(format_pricedrops, pricedropfield="pct_change1W", 
+        .apply(format_pricedrops, pricedropfield="1WeekChange", 
                thresholds=[-0.05, -0.1], colors=["lightsteelblue", "steelblue"], axis=1) \
-        .hide_columns(['Symbol', 'GICS_Sector'])
+        .hide_columns(['GICS_Sector']) \
+        .hide_index() \
+        .set_table_attributes('cellspacing="0"') \
+        .set_table_styles(
+           [{
+               'selector': 'table',
+               'props': [
+                   ('border-collapse', 'collapse')]
+           }, {
+               'selector': 'th',
+               'props': [
+                   ('border-collapse', 'collapse'),
+                   ('background-color', 'gray'),
+                   ('color', 'white'),
+                   ('border-color', 'black'),
+                   ('border-style ', 'solid'),
+                   ('border-width','1px')]
+           },
+            {
+               'selector': 'td',
+               'props': [
+                   ('border-collapse', 'collapse'),
+                   ('border-color', 'black'),
+                   ('border-style ', 'solid'),
+                   ('border-width','1px')]
+           }
+           ])
     
     yearhigh_drop_styled = yearhigh_drop[yearhigh_drop["GICS_Sector"]!= "Energy"][yearhigh_drop["pct_changeFrom1YHigh"] < -0.25]
     if (len(yearhigh_drop_styled.index) < 5):
         yearhigh_drop_styled = yearhigh_drop[yearhigh_drop["GICS_Sector"]!= "Energy"].head(5)
+    yearhigh_drop_styled = yearhigh_drop_styled.rename({"pct_changeFrom1YHigh": "1YrHighChange"}, axis=1)
     yearhigh_drop_styled = yearhigh_drop_styled.style.format({'latestPrice': "{:.2f}", 'week52High': "{:.2f}", 
-                                                              'pct_changeFrom1YHigh': "{:.2%}"}, na_rep= "N/A") \
-        .apply(format_pricedrops, pricedropfield="pct_changeFrom1YHigh", 
+                                                              '1YrHighChange': "{:.2%}"}, na_rep= "N/A") \
+        .apply(format_pricedrops, pricedropfield="1YrHighChange", 
                thresholds=[-0.25, -0.4], colors=["lightsteelblue", "steelblue"], axis=1) \
         .apply(format_sectors, axis=1) \
-        .hide_columns(['Symbol', 'GICS_Sector'])
+        .hide_columns(['GICS_Sector']) \
+        .hide_index() \
+        .set_table_attributes('cellspacing="0"') \
+        .set_table_styles(
+           [{
+               'selector': 'table',
+               'props': [
+                   ('border-collapse', 'collapse')]
+           }, {
+               'selector': 'th',
+               'props': [
+                   ('border-collapse', 'collapse'),
+                   ('background-color', 'gray'),
+                   ('color', 'white'),
+                   ('border-color', 'black'),
+                   ('border-style ', 'solid'),
+                   ('border-width','1px')]
+           },
+            {
+               'selector': 'td',
+               'props': [
+                   ('border-collapse', 'collapse'),
+                   ('border-color', 'black'),
+                   ('border-style ', 'solid'),
+                   ('border-width','1px')]
+           }
+           ])
     
-    return day_drop_styled.render(), week_drop_styled.render(), yearhigh_drop_styled.render()
+    return day_drop_styled, week_drop_styled, yearhigh_drop_styled
 
 
 # In[12]:
@@ -213,7 +300,8 @@ if len(sys.argv) == 1 or "ipykernel_launcher" in sys.argv[0]:
 if (len(sys.argv) > 1 and not "ipykernel_launcher" in sys.argv[0]) or sendEmail == "y":
     ### CONFIG
     import config
-    
+    from premailer import transform
+
     ### DATA
     dayDrops, weekDrops, YearHighDrops = getDataForEmail()
     
@@ -237,9 +325,9 @@ if (len(sys.argv) > 1 and not "ipykernel_launcher" in sys.argv[0]) or sendEmail 
            Here are today's stocks with the largest 1 day, 1 week and 1 year price drops:<br>
         </p>
         """ \
-        + "<div><h4>Price drops for the day</h4>" + dayDrops + "</div>" \
-        + "<div><h4>Price drops over 7 days</h4>" + weekDrops + "</div>" \
-        + "<div><h4>Price drops from year high</h4>" + YearHighDrops + "</div>" \
+        + "<div><h4>Price drops for the day</h4>" + transform(dayDrops.render()) + "</div>" \
+        + "<div><h4>Price drops over 7 days</h4>" + transform(weekDrops.render()) + "</div>" \
+        + "<div><h4>Price drops from year high</h4>" + transform(YearHighDrops.render()) + "</div>" \
     """\
       </body>
     </html>

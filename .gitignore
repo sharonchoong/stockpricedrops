@@ -1,5 +1,6 @@
 results/*
 config.py
+automateRun.bat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
